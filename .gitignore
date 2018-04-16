@@ -1,5 +1,8 @@
+# IDE configuration #
+#####################
 .idea/
-.chalice/
+
+
 # Compiled source #
 ###################
 *.com
