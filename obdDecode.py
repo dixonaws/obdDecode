@@ -1,19 +1,13 @@
 import json
 
-
-def main():
+# this handler will be run by AWS Lambda if this program is configured in a Lambda function
+# otherwise, this function is invoked directly like a main() method
+def lambda_handler(event, context):
     print "obdDecode v1.0"
     print "Decode hex values into their integer equivalent and encode into JSON"
     print "Intended to be deployed to Greengrass Core to decode hex messages from a:freeRTOS"
 
-    strObdPids = "aaaa9e0000003600000034580000a900" \
-                 "0000b50000000000000000000000000000" \
-                 "0000000000000000000000000000000000" \
-                 "0000000000000000000000000000000000" \
-                 "0000000000000000000000000000000000" \
-                 "0000000000000000000000000000000000" \
-                 "0000000000000000000000000000000000" \
-                 "000000000000000000000000aaaa";
+    strObdPids = context['message']
 
     # strObdPids should contain the following PIDs
     # 4 - engine load
@@ -66,6 +60,7 @@ def main():
     #  101, 102, 16, 18, 19, 20, 21, 22,
     #  23, 24, 25, 26, 27, 28, 29, 30};
 
+
 def calculateEngineRPM(hexEngineRPM):
     # raw hex, not yet decoded
     hexEngineRPM_A = hexEngineRPM[0:4]
@@ -80,6 +75,7 @@ def calculateEngineRPM(hexEngineRPM):
 
     return intEngineRPM
 
+
 def calculateEngineLoad(hexEngineLoad):
     # calculation on mode 1 PIDs for engine load: A(100/255)
 
@@ -88,8 +84,21 @@ def calculateEngineLoad(hexEngineLoad):
     # convert to base10
     intEngineLoad_A = int(hexEngineLoad_A, 16)
 
-    intEngineLoad=intEngineLoad_A(100/255)
+    intEngineLoad = intEngineLoad_A(100 / 255)
 
     return intEngineLoad
 
-main()
+
+dictEvent = {}
+dictContext = {}
+
+dictContext['message'] = "aaaa9e0000003600000034580000a900" \
+                     "0000b50000000000000000000000000000" \
+                     "0000000000000000000000000000000000" \
+                     "0000000000000000000000000000000000" \
+                     "0000000000000000000000000000000000" \
+                     "0000000000000000000000000000000000" \
+                     "0000000000000000000000000000000000" \
+                     "000000000000000000000000aaaa";
+
+lambda_handler(dictEvent, dictContext)
