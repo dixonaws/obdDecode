@@ -1,5 +1,6 @@
 import json
 
+
 # this handler will be run by AWS Lambda if this program is configured in a Lambda function
 # otherwise, this function is invoked directly like a main() method
 def lambda_handler(event, context):
@@ -39,26 +40,38 @@ def lambda_handler(event, context):
         print pid
 
     lstPidPosition = []
-    lstPidPosition.insert(0, 'EngineLoad')  # PID=4
-    lstPidPosition.insert(1, 'FuelPressure')  # PID=10
-    lstPidPosition.insert(2, 'EngineRPM')  # PID=12
+    lstPidPosition.insert(0, 'EngineLoad')  # PID=4 (%)
+    lstPidPosition.insert(1, 'FuelPressure')  # PID=10 (kPa)
+    lstPidPosition.insert(2, 'EngineRPM')  # PID=12 (int)
     lstPidPosition.insert(3, 'VehicleSpeed')  # PID=13
-    lstPidPosition.insert(4, 'ThrottlePosition')  # PID=17
+    lstPidPosition.insert(4, 'ThrottlePosition')  # PID=17 (%)
 
-    print "Engine RPM per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')]))
+    # print "Engine RPM per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])) + "RPM"
+    #
+    # print "Engine load per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineLoad')])) + "%"
+    #
+    # print "The fuel pressure per calculation is " + str(
+    #     calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')])) + "kPa"
+    #
+    # print "The throttle position per calculation is " + str(
+    #     calculateThrottlePosition(lstPids[lstPidPosition.index('ThrottlePosition')])) + "%"
 
-    print "Engine load per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineLoad')]))
+    dictTelemetryData = {}
+    dictTelemetryData['Version'] = "1.0"
+    dictTelemetryData['Timestamp'] = "Sun Apr 15 23:30:11 EDT 2018"
+    dictTelemetryData['Lat'] = "42.81989"
+    dictTelemetryData['Long'] = "-86.088397"
+    dictTelemetryData['VIN'] = "WP0AD2A90ES166144"
+    dictTelemetryData['EngineLoad'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
+    dictTelemetryData['FuelPressure'] = calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')])
+    dictTelemetryData['EngineRPM'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
+    dictTelemetryData['ThrottlePosition'] = calculateThrottlePosition(lstPids[lstPidPosition.index('ThrottlePosition')])
 
-    # print "The engine load value in hex is " + lstPids[lstPidPosition.index('EngineLoad')]
-    # print "The fuel pressure value in hex is " + lstPids[lstPidPosition.index('FuelPressure')]
-    # print "The throttle position value in hex is " + lstPids[lstPidPosition.index('ThrottlePosition')]
+    strJsonTelemetryData = json.dumps(dictTelemetryData)
 
-    # from the a:freeRTOS program to query PIDs from the neoOBD2Pro
-    # pidNumberLookup[32] =
-    # {4, 10, 12, 13, 17, 35, 47, 48,
-    #  49, 77, 92, 93, 94, 98, 99, 100,
-    #  101, 102, 16, 18, 19, 20, 21, 22,
-    #  23, 24, 25, 26, 27, 28, 29, 30};
+    print strJsonTelemetryData
+
+    return strJsonTelemetryData
 
 
 def calculateEngineRPM(hexEngineRPM):
@@ -78,7 +91,6 @@ def calculateEngineRPM(hexEngineRPM):
 
 def calculateEngineLoad(hexEngineLoad):
     # calculation on mode 1 PIDs for engine load: A(100/255)
-
     hexEngineLoad_A = hexEngineLoad[0:4]
 
     # convert to base10
@@ -89,16 +101,47 @@ def calculateEngineLoad(hexEngineLoad):
     return intEngineLoad
 
 
+def calculateFuelPressure(hexFuelPressure):
+    # calculation on mode 1 PIDs for fuel pressure: 3A
+
+    hexFuelPressure_A = hexFuelPressure[0:4]
+
+    intFuelPressure = int(hexFuelPressure_A, 16)
+
+    intFuelPressure = intFuelPressure * 3
+
+    return intFuelPressure
+
+
+def calculateThrottlePosition(hexThrottlePosition):
+    # calculation on mode 1 PIDs for throttle position: (100/255)A
+
+    hexThrottlePosition_A = hexThrottlePosition[0:4]
+
+    intThrottlePosition = int(hexThrottlePosition_A, 16)
+
+    intThrottlePosition = intThrottlePosition * (100 / 255)
+
+    return intThrottlePosition
+
+
+# from the a:freeRTOS program to query PIDs from the neoOBD2Pro
+# pidNumberLookup[32] =
+# {4, 10, 12, 13, 17, 35, 47, 48,
+#  49, 77, 92, 93, 94, 98, 99, 100,
+#  101, 102, 16, 18, 19, 20, 21, 22,
+#  23, 24, 25, 26, 27, 28, 29, 30};
+
 dictEvent = {}
 dictContext = {}
 
 dictContext['message'] = "aaaa9e0000003600000034580000a900" \
-                     "0000b50000000000000000000000000000" \
-                     "0000000000000000000000000000000000" \
-                     "0000000000000000000000000000000000" \
-                     "0000000000000000000000000000000000" \
-                     "0000000000000000000000000000000000" \
-                     "0000000000000000000000000000000000" \
-                     "000000000000000000000000aaaa";
+                         "0000b50000000000000000000000000000" \
+                         "0000000000000000000000000000000000" \
+                         "0000000000000000000000000000000000" \
+                         "0000000000000000000000000000000000" \
+                         "0000000000000000000000000000000000" \
+                         "0000000000000000000000000000000000" \
+                         "000000000000000000000000aaaa";
 
 lambda_handler(dictEvent, dictContext)
