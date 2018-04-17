@@ -1,5 +1,5 @@
 import json
-
+import boto
 
 # this handler will be run by AWS Lambda if this program is configured in a Lambda function
 # otherwise, this function is invoked directly like a main() method
@@ -46,16 +46,6 @@ def lambda_handler(event, context):
     lstPidPosition.insert(3, 'VehicleSpeed')  # PID=13
     lstPidPosition.insert(4, 'ThrottlePosition')  # PID=17 (%)
 
-    # print "Engine RPM per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])) + "RPM"
-    #
-    # print "Engine load per calculation is " + str(calculateEngineRPM(lstPids[lstPidPosition.index('EngineLoad')])) + "%"
-    #
-    # print "The fuel pressure per calculation is " + str(
-    #     calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')])) + "kPa"
-    #
-    # print "The throttle position per calculation is " + str(
-    #     calculateThrottlePosition(lstPids[lstPidPosition.index('ThrottlePosition')])) + "%"
-
     dictTelemetryData = {}
     dictTelemetryData['Version'] = "1.0"
     dictTelemetryData['Timestamp'] = "Sun Apr 15 23:30:11 EDT 2018"
@@ -69,7 +59,12 @@ def lambda_handler(event, context):
 
     strJsonTelemetryData = json.dumps(dictTelemetryData)
 
-    print strJsonTelemetryData
+    # print strJsonTelemetryData
+
+    strVin="WP0AD2A90ES166144"
+    strTopic="connectedcar-v2/trip/" + strVin
+
+    publishEvent(strJsonTelemetryData, strTopic)
 
     return strJsonTelemetryData
 
@@ -123,6 +118,14 @@ def calculateThrottlePosition(hexThrottlePosition):
     intThrottlePosition = intThrottlePosition * (100 / 255)
 
     return intThrottlePosition
+
+def publishEvent(message, topic):
+    # connectedcar - v2 / trip / 123456
+
+    print "I am going to publish to " + topic
+    print "This is the message: \n" + message
+
+    return None
 
 
 # from the a:freeRTOS program to query PIDs from the neoOBD2Pro
