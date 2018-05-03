@@ -1,11 +1,19 @@
 import json
-import boto
+import boto3
+import memcache
+import greengrasssdk
+
+# Create a greengrass core sdk client
+client = greengrasssdk.client('iot-data')
+
+# Create a memcache client
+mc = memcache.Client(['127.0.0.1:11211'], debug=0)
 
 # this handler will be run by AWS Lambda if this program is configured in a Lambda function
 # otherwise, this function is invoked directly like a main() method
 def lambda_handler(event, context):
-    print "obdDecode v1.0"
-    print "Decode hex values into their integer equivalent and encode into JSON"
+    print "obddecode v1.0"
+    print "Decode hex values into their integer equivalent and store in memcache"
     print "Intended to be deployed to Greengrass Core to decode hex messages from a:freeRTOS"
 
     strObdPids = context['message']
@@ -46,27 +54,32 @@ def lambda_handler(event, context):
     lstPidPosition.insert(3, 'VehicleSpeed')  # PID=13
     lstPidPosition.insert(4, 'ThrottlePosition')  # PID=17 (%)
 
-    dictTelemetryData = {}
-    dictTelemetryData['Version'] = "1.0"
-    dictTelemetryData['Timestamp'] = "Sun Apr 15 23:30:11 EDT 2018"
-    dictTelemetryData['Lat'] = "42.81989"
-    dictTelemetryData['Long'] = "-86.088397"
-    dictTelemetryData['VIN'] = "WP0AD2A90ES166144"
-    dictTelemetryData['EngineLoad'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
-    dictTelemetryData['FuelPressure'] = calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')])
-    dictTelemetryData['EngineRPM'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
-    dictTelemetryData['ThrottlePosition'] = calculateThrottlePosition(lstPids[lstPidPosition.index('ThrottlePosition')])
+    # dictTelemetryData = {}
+    # dictTelemetryData['Version'] = "1.0"
+    # dictTelemetryData['Timestamp'] = "Sun Apr 15 23:30:11 EDT 2018"
+    # dictTelemetryData['Lat'] = "42.81989"
+    # dictTelemetryData['Long'] = "-86.088397"
+    # dictTelemetryData['VIN'] = "WP0AD2A90ES166144"
+    # dictTelemetryData['EngineLoad'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
+    # dictTelemetryData['FuelPressure'] = calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')])
+    # dictTelemetryData['EngineRPM'] = calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')])
+    # dictTelemetryData['ThrottlePosition'] = calculateThrottlePosition(lstPids[lstPidPosition.index('ThrottlePosition')])
+    #
+    # strJsonTelemetryData = json.dumps(dictTelemetryData)
+    #
+    # # print strJsonTelemetryData
+    #
+    # strVin="WP0AD2A90ES166144"
+    # strTopic="connectedcar-v2/trip/" + strVin
+    #
+    # publishEvent(strJsonTelemetryData, strTopic)
 
-    strJsonTelemetryData = json.dumps(dictTelemetryData)
+    mc.set('EngineRPM', calculateEngineRPM(lstPids[lstPidPosition.index('EngineRPM')]) )
+    mc.set('FuelPressure', calculateFuelPressure(lstPids[lstPidPosition.index('FuelPressure')]))
+    mc.set('EngineLoad', calculateEngineLoad(lstPids[lstPidPosition.index('EngineLoad')]))
+    mc.set('ThrottlePosition', calculateFuelPressure(lstPids[lstPidPosition.index('ThrottlePosition')]))
 
-    # print strJsonTelemetryData
-
-    strVin="WP0AD2A90ES166144"
-    strTopic="connectedcar-v2/trip/" + strVin
-
-    publishEvent(strJsonTelemetryData, strTopic)
-
-    return strJsonTelemetryData
+    return 'Encoded PIDs in local memcache'
 
 
 def calculateEngineRPM(hexEngineRPM):
@@ -91,7 +104,7 @@ def calculateEngineLoad(hexEngineLoad):
     # convert to base10
     intEngineLoad_A = int(hexEngineLoad_A, 16)
 
-    intEngineLoad = intEngineLoad_A(100 / 255)
+    intEngineLoad = intEngineLoad_A * (100 / 255)
 
     return intEngineLoad
 
@@ -147,4 +160,9 @@ dictContext['message'] = "aaaa9e0000003600000034580000a900" \
                          "0000000000000000000000000000000000" \
                          "000000000000000000000000aaaa";
 
-lambda_handler(dictEvent, dictContext)
+# to be consistent with Lambda convention, we'll rename event and context variables
+event=dictEvent
+context=dictContext
+
+# if we're called from the command line (likely for testing), just call the Lambda handler
+lambda_handler(event, context)
